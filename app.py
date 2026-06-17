@@ -1,21 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# 1. 기초 설정 및 함수
-st.set_page_config(page_title="윗치폼 정산 마스터", layout="wide")
-
-def 파일_안전_로드(uploaded_file):
-    if uploaded_file is None: return pd.DataFrame()
-    uploaded_file.seek(0)
-    try:
-        if uploaded_file.name.lower().endswith('.csv'): return pd.read_csv(uploaded_file)
-        else: return pd.read_excel(uploaded_file)
-    except: return pd.DataFrame()
-
-def to_csv_bytes_fail_safe(df):
-    try: return df.to_csv(index=False).encode('utf-8-sig')
-    except: return df.to_csv(index=False).encode('cp949', errors='ignore')
-
+st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
 
 # [디자인] 눈이 편안한 차분한 파스텔 분홍 스타일링
 st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
@@ -303,10 +289,7 @@ if (order_files and bank_file) and st.session_state.is_calculated:
                 rerun_needed = False
                 for idx, row in edited_df.iterrows():
                     orig_row = matched_df.iloc[idx]
-                    if '환불 처리' in row and '환불 처리' in orig_row:
-                        if row['환불 처리'] and not orig_row['환불 처리']:
-                            st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
-                            rerun_needed = True
+                    if row['환불 처리'] and not orig_row['환불 처리']:
                         if row['is_manual_add']:
                             # 수기 추가 건 환불 처리
                             st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
