@@ -1,23 +1,20 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
+# 1. 기초 설정 및 함수
+st.set_page_config(page_title="윗치폼 정산 마스터", layout="wide")
 
-# 함수 정의 (함수가 위에 있어야 에러가 안 납니다)
 def 파일_안전_로드(uploaded_file):
     if uploaded_file is None: return pd.DataFrame()
     uploaded_file.seek(0)
     try:
-        if uploaded_file.name.lower().endswith('.csv'):
-            return pd.read_csv(uploaded_file)
-        else:
-            return pd.read_excel(uploaded_file)
-    except Exception:
-        return pd.DataFrame()
+        if uploaded_file.name.lower().endswith('.csv'): return pd.read_csv(uploaded_file)
+        else: return pd.read_excel(uploaded_file)
+    except: return pd.DataFrame()
 
 def to_csv_bytes_fail_safe(df):
     try: return df.to_csv(index=False).encode('utf-8-sig')
-    except Exception: return df.to_csv(index=False).encode('cp949', errors='ignore')
+    except: return df.to_csv(index=False).encode('cp949', errors='ignore')
 
 
 # [디자인] 눈이 편안한 차분한 파스텔 분홍 스타일링
@@ -95,15 +92,28 @@ with btn_space:
 
 def 파일_안전_로드(uploaded_file):
     if uploaded_file is None: return pd.DataFrame()
-    uploaded_file.seek(0)
     try:
-        # 확장자에 따라 자동으로 읽기 (가장 안정적)
-        if uploaded_file.name.lower().endswith('.csv'):
-            return pd.read_csv(uploaded_file)
+        file_name = uploaded_file.name.lower()
+        if file_name.endswith('.csv'):
+            try: return pd.read_csv(uploaded_file, encoding='utf-8')
+            except Exception:
+                uploaded_file.seek(0)
+                return pd.read_csv(uploaded_file, encoding='cp949', errors='ignore')
         else:
-            return pd.read_excel(uploaded_file) # engine 지정 없이 자동으로 시도
-    except Exception as e:
-        return pd.DataFrame()
+            try: return pd.read_excel(uploaded_file)
+            except Exception:
+                uploaded_file.seek(0)
+                return pd.read_excel(uploaded_file, header=None)
+    except Exception:
+        try:
+            uploaded_file.seek(0)
+            return pd.read_html(uploaded_file)[0].reset_index(drop=True)
+        except Exception:
+            return pd.DataFrame()
+
+def to_csv_bytes_fail_safe(df):
+    try: return df.to_csv(index=False).encode('utf-8-sig')
+    except Exception: return df.to_csv(index=False).encode('cp949', errors='ignore')
 
 # 정산 엔진 가동
 if (order_files and bank_file) and st.session_state.is_calculated:
@@ -274,41 +284,21 @@ if (order_files and bank_file) and st.session_state.is_calculated:
             if st.session_state.search_word and not matched_df.empty:
                 matched_df = matched_df[matched_df['이름'].str.contains(st.session_state.search_word, na=False, case=False)]
             
-           if not matched_df.empty:
-    edited_df = st.data_editor(
-        matched_df[['order_id', 'bank_idx', '이름', '주문금액', '실제입금액', '비고', 'is_manual_add', '환불 처리', '주문 삭제']],
-        column_config={
-            "order_id": None, "bank_idx": None, "is_manual_add": None,
-            "이름": st.column_config.TextColumn("이름", disabled=True),
-            "주문금액": st.column_config.NumberColumn("주문금액", format="%d원", disabled=True),
-            "실제입금액": st.column_config.NumberColumn("실제입금액", format="%d원", disabled=True),
-            "비고": st.column_config.TextColumn("비고", disabled=True),
-            "환불 처리": st.column_config.CheckboxColumn("환불 처리", default=False),
-            "주문 삭제": st.column_config.CheckboxColumn("주문 삭제", default=False),
-        },
-        disabled=["이름", "주문금액", "실제입금액", "비고"],
-        key="main_data_editor", use_container_width=True, height=220
-    )
-    
-    rerun_needed = False
-    for idx, row in edited_df.iterrows():
-        if idx < len(matched_df):
-            orig_row = matched_df.iloc[idx]
-            if row['환불 처리'] and not orig_row['환불 처리']:
-                st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
-                rerun_needed = True
-            if row['주문 삭제'] and not orig_row['주문 삭제']:
-                st.session_state.deleted_orders.add(row['order_id'])
-                rerun_needed = True
-    if rerun_needed: st.rerun()
-else:
-    st.info("조건에 맞는 내역이 완료 명단에 없습니다.")
-    
-    rerun_needed = False
-    for idx, row in edited_df.iterrows():
-        # 데이터가 있는 경우에만 처리
-        if idx < len(matched_df):
-            orig_row = matched_df.iloc[idx]
+            if not matched_df.empty:
+                edited_df = st.data_editor(
+                    matched_df[['order_id', 'bank_idx', '이름', '주문금액', '실제입금액', '비고', 'is_manual_add', '환불 처리', '주문 삭제']],
+                    column_config={
+                        "order_id": None, "bank_idx": None, "is_manual_add": None,
+                        "이름": st.column_config.TextColumn("이름", disabled=True),
+                        "주문금액": st.column_config.NumberColumn("주문금액", format="%d원", disabled=True),
+                        "실제입금액": st.column_config.NumberColumn("실제입금액", format="%d원", disabled=True),
+                        "비고": st.column_config.TextColumn("비고", disabled=True),
+                        "환불 처리": st.column_config.CheckboxColumn("환불 처리", default=False),
+                        "주문 삭제": st.column_config.CheckboxColumn("주문 삭제", default=False),
+                    },
+                    disabled=["이름", "주문금액", "실제입금액", "비고"],
+                    key="main_data_editor", use_container_width=True, height=220
+                )
                 
                 rerun_needed = False
                 for idx, row in edited_df.iterrows():
@@ -541,9 +531,3 @@ else:
 
         st.config.set_option('server.enableCORS', False)
 st.config.set_option('server.enableXsrfProtection', False)
-
-def to_csv_bytes_fail_safe(df):
-    try: 
-        return df.to_csv(index=False).encode('utf-8-sig')
-    except Exception: 
-        return df.to_csv(index=False).encode('cp949', errors='ignore')
