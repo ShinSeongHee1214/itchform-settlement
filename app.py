@@ -504,3 +504,9 @@ if (order_files and bank_file) and st.session_state.is_calculated:
 
         st.config.set_option('server.enableCORS', False)
 st.config.set_option('server.enableXsrfProtection', False)
+
+def to_csv_bytes_fail_safe(df):
+    try: 
+        return df.to_csv(index=False).encode('utf-8-sig')
+    except Exception: 
+        return df.to_csv(index=False).encode('cp949', errors='ignore')
