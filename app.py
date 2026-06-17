@@ -80,14 +80,12 @@ def 파일_안전_로드(uploaded_file):
     if uploaded_file is None: return pd.DataFrame()
     uploaded_file.seek(0)
     try:
-        # 엑셀/CSV 형식을 명확하게 구분하고, 서버에서 인식률이 높은 엔진 사용
+        # 확장자에 따라 자동으로 읽기 (가장 안정적)
         if uploaded_file.name.lower().endswith('.csv'):
             return pd.read_csv(uploaded_file)
         else:
-            # openpyxl 엔진을 명시하여 서버 환경 에러 방지
-            return pd.read_excel(uploaded_file, engine='openpyxl')
+            return pd.read_excel(uploaded_file) # engine 지정 없이 자동으로 시도
     except Exception as e:
-        st.write(f"파일 읽기 오류: {e}") # 어떤 파일에서 에러가 나는지 확인
         return pd.DataFrame()
 
 # 정산 엔진 가동
