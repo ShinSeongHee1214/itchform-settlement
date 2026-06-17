@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 
+st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
+
 # [디자인] 눈이 편안한 차분한 파스텔 분홍 스타일링
 st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
 
@@ -512,3 +514,6 @@ if (order_files and bank_file) and st.session_state.is_calculated:
             
     except Exception as e:
         st.error(f"파일 연산 도중 예기치 못한 에러가 발생했습니다: {e}")
+
+        st.config.set_option('server.enableCORS', False)
+st.config.set_option('server.enableXsrfProtection', False)
