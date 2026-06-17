@@ -303,7 +303,10 @@ if (order_files and bank_file) and st.session_state.is_calculated:
                 rerun_needed = False
                 for idx, row in edited_df.iterrows():
                     orig_row = matched_df.iloc[idx]
-                    if row['환불 처리'] and not orig_row['환불 처리']:
+                    if '환불 처리' in row and '환불 처리' in orig_row:
+                        if row['환불 처리'] and not orig_row['환불 처리']:
+                            st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
+                            rerun_needed = True
                         if row['is_manual_add']:
                             # 수기 추가 건 환불 처리
                             st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
