@@ -78,28 +78,17 @@ with btn_space:
 
 def 파일_안전_로드(uploaded_file):
     if uploaded_file is None: return pd.DataFrame()
+    uploaded_file.seek(0)
     try:
-        file_name = uploaded_file.name.lower()
-        if file_name.endswith('.csv'):
-            try: return pd.read_csv(uploaded_file, encoding='utf-8')
-            except Exception:
-                uploaded_file.seek(0)
-                return pd.read_csv(uploaded_file, encoding='cp949', errors='ignore')
+        # 엑셀/CSV 형식을 명확하게 구분하고, 서버에서 인식률이 높은 엔진 사용
+        if uploaded_file.name.lower().endswith('.csv'):
+            return pd.read_csv(uploaded_file)
         else:
-            try: return pd.read_excel(uploaded_file)
-            except Exception:
-                uploaded_file.seek(0)
-                return pd.read_excel(uploaded_file, header=None)
-    except Exception:
-        try:
-            uploaded_file.seek(0)
-            return pd.read_html(uploaded_file)[0].reset_index(drop=True)
-        except Exception:
-            return pd.DataFrame()
-
-def to_csv_bytes_fail_safe(df):
-    try: return df.to_csv(index=False).encode('utf-8-sig')
-    except Exception: return df.to_csv(index=False).encode('cp949', errors='ignore')
+            # openpyxl 엔진을 명시하여 서버 환경 에러 방지
+            return pd.read_excel(uploaded_file, engine='openpyxl')
+    except Exception as e:
+        st.write(f"파일 읽기 오류: {e}") # 어떤 파일에서 에러가 나는지 확인
+        return pd.DataFrame()
 
 # 정산 엔진 가동
 if (order_files and bank_file) and st.session_state.is_calculated:
