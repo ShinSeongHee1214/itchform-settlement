@@ -3,6 +3,23 @@ import pandas as pd
 
 st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
 
+# 함수 정의 (함수가 위에 있어야 에러가 안 납니다)
+def 파일_안전_로드(uploaded_file):
+    if uploaded_file is None: return pd.DataFrame()
+    uploaded_file.seek(0)
+    try:
+        if uploaded_file.name.lower().endswith('.csv'):
+            return pd.read_csv(uploaded_file)
+        else:
+            return pd.read_excel(uploaded_file)
+    except Exception:
+        return pd.DataFrame()
+
+def to_csv_bytes_fail_safe(df):
+    try: return df.to_csv(index=False).encode('utf-8-sig')
+    except Exception: return df.to_csv(index=False).encode('cp949', errors='ignore')
+
+
 # [디자인] 눈이 편안한 차분한 파스텔 분홍 스타일링
 st.set_page_config(page_title="윗치폼 정산 마스터 시스템", layout="wide")
 
