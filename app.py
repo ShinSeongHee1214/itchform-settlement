@@ -274,12 +274,35 @@ if (order_files and bank_file) and st.session_state.is_calculated:
             if st.session_state.search_word and not matched_df.empty:
                 matched_df = matched_df[matched_df['이름'].str.contains(st.session_state.search_word, na=False, case=False)]
             
-           if not matched_df.empty:
-    edited_df = st.data_editor(
-        matched_df[['order_id', 'bank_idx', '이름', '주문금액', '실제입금액', '비고', 'is_manual_add', '환불 처리', '주문 삭제']],
-        # (기존 column_config 내용 그대로 유지)
-        key="main_data_editor", use_container_width=True, height=220
-    )
+            if not matched_df.empty:
+                        edited_df = st.data_editor(
+                            matched_df[['order_id', 'bank_idx', '이름', '주문금액', '실제입금액', '비고', 'is_manual_add', '환불 처리', '주문 삭제']],
+                            column_config={
+                                "order_id": None, "bank_idx": None, "is_manual_add": None,
+                                "이름": st.column_config.TextColumn("이름", disabled=True),
+                                "주문금액": st.column_config.NumberColumn("주문금액", format="%d원", disabled=True),
+                                "실제입금액": st.column_config.NumberColumn("실제입금액", format="%d원", disabled=True),
+                                "비고": st.column_config.TextColumn("비고", disabled=True),
+                                "환불 처리": st.column_config.CheckboxColumn("환불 처리", default=False),
+                                "주문 삭제": st.column_config.CheckboxColumn("주문 삭제", default=False),
+                            },
+                            disabled=["이름", "주문금액", "실제입금액", "비고"],
+                            key="main_data_editor", use_container_width=True, height=220
+                        )
+                        
+                        rerun_needed = False
+                        for idx, row in edited_df.iterrows():
+                            if idx < len(matched_df):
+                                orig_row = matched_df.iloc[idx]
+                                if row['환불 처리'] and not orig_row['환불 처리']:
+                                    st.session_state.refunded_orders[str(row['order_id'])] = {'name': row['이름'], 'price': row['주문금액']}
+                                    rerun_needed = True
+                                if row['주문 삭제'] and not orig_row['주문 삭제']:
+                                    st.session_state.deleted_orders.add(row['order_id'])
+                                    rerun_needed = True
+                        if rerun_needed: st.rerun()
+                    else:
+                        st.info("조건에 맞는 내역이 완료 명단에 없습니다.")
     
     rerun_needed = False
     for idx, row in edited_df.iterrows():
